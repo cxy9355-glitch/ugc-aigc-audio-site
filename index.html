@@ -1,0 +1,670 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI音频生成页面修正版</title>
+        <style>
+      :root {
+        --bg: #53a8f5;
+        --sidebar: #2d2f31;
+        --yellow: #f4dd34;
+        --panel: #d9e6f1;
+        --white: #fff;
+        --blue: #3a95e6;
+        --blue-dark: #3188d8;
+        --tab-blue: #8aa1d3;
+        --muted: #6f87a3;
+        --shadow: 0 18px 40px rgba(22, 79, 129, 0.16);
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+        background: linear-gradient(180deg, #62b0fa, #8fc6fb);
+      }
+      .canvas {
+        width: min(1800px, calc(100vw - 24px));
+        margin: 14px auto;
+        display: flex;
+        gap: 20px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+      .frame {
+        width: 867px;
+        border-radius: 26px;
+        overflow: hidden;
+        box-shadow: var(--shadow);
+        background: rgba(255,255,255,0.1);
+      }
+      .screen {
+        height: 450px;
+        display: grid;
+        grid-template-columns: 124px 426px 317px;
+        background: var(--bg);
+      }
+      .sidebar {
+        position: relative;
+        background: var(--sidebar);
+      }
+      .arrow {
+        padding: 10px 0 0 16px;
+        font-size: 42px;
+        font-weight: 900;
+        color: var(--yellow);
+        line-height: 1;
+      }
+      .title {
+        padding: 8px 0 0 18px;
+        color: white;
+        font-size: 18px;
+        font-weight: 900;
+        line-height: 1.05;
+      }
+      .nav-tab {
+        width: 108px;
+        height: 36px;
+        margin-top: 16px;
+        margin-left: 6px;
+        border-radius: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        font-weight: 900;
+      }
+      .nav-tab.active {
+        background: var(--yellow);
+        color: #342b00;
+      }
+      .nav-subtab {
+        width: 108px;
+        height: 36px;
+        margin-top: 10px;
+        margin-left: 6px;
+        border-radius: 18px;
+        background: rgba(255,255,255,0.06);
+        color: white;
+        font-size: 14px;
+        font-weight: 900;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 0 8px;
+      }
+      .nav-subtab.active {
+        background: var(--yellow);
+        color: #342b00;
+      }
+      .saved-col {
+        padding: 12px;
+      }
+      .saved-box {
+        height: 100%;
+        overflow: hidden;
+        border-radius: 24px;
+        background: linear-gradient(180deg, var(--blue), var(--blue-dark));
+      }
+      .saved-head {
+        height: 46px;
+        padding: 0 18px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: var(--yellow);
+        color: #3a3000;
+        font-size: 18px;
+        font-weight: 900;
+      }
+      .audio-item {
+        display: grid;
+        grid-template-columns: 40px 1fr 36px;
+        gap: 12px;
+        padding: 12px 16px;
+        color: white;
+        border-bottom: 1px dashed rgba(255,255,255,0.18);
+      }
+      .audio-item:last-child { border-bottom: 0; }
+      .play {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        background: white;
+        color: var(--blue-dark);
+        display: grid;
+        place-items: center;
+        font-size: 14px;
+        font-weight: 900;
+      }
+      .audio-item strong {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 15px;
+      }
+      .audio-item span {
+        font-size: 12px;
+        color: rgba(255,255,255,0.82);
+      }
+      .dots {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.92);
+        color: #213247;
+        display: grid;
+        place-items: center;
+        font-size: 0;
+        position: relative;
+      }
+      .dots::before {
+        content: "…";
+        font-size: 18px;
+        font-weight: 900;
+        line-height: 1;
+      }
+      .param-col {
+        padding: 8px 10px 8px 8px;
+        background: rgba(230,239,246,0.92);
+        display: flex;
+        flex-direction: column;
+      }
+      .param-title {
+        margin: 0 0 6px;
+        font-size: 18px;
+        font-weight: 900;
+      }
+      .section { margin-bottom: 6px; }
+      .label {
+        margin-bottom: 4px;
+        font-size: 13px;
+        font-weight: 900;
+      }
+      .textbox,
+      .voice-chip,
+      .select,
+      .valuebox,
+      .preview-card {
+        background: var(--white);
+        box-shadow: inset 0 0 0 1px rgba(31,48,68,0.06);
+      }
+      .textbox {
+        min-height: 62px;
+        padding: 8px 10px;
+        border-radius: 12px;
+        position: relative;
+        font-size: 12px;
+      }
+      .counter {
+        position: absolute;
+        right: 10px;
+        bottom: 7px;
+        font-size: 10px;
+        color: var(--muted);
+        font-weight: 700;
+      }
+      .voice-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 6px;
+      }
+      .voice-chip {
+        height: 44px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 0 5px;
+        color: #5d718b;
+        font-size: 10px;
+        font-weight: 900;
+      }
+      .voice-chip.active {
+        box-shadow: inset 0 0 0 2px rgba(236, 200, 26, 0.9);
+      }
+      .voice-chip.current {
+        position: relative;
+        color: #8b97a8;
+        background: #f3f6fa;
+        box-shadow: inset 0 0 0 2px rgba(236, 200, 26, 0.9);
+        cursor: not-allowed;
+      }
+      .voice-chip.current::after {
+        content: "当前";
+        position: absolute;
+        top: 3px;
+        right: 4px;
+        min-width: 20px;
+        height: 12px;
+        padding: 0 4px;
+        border-radius: 999px;
+        background: rgba(244, 221, 52, 0.95);
+        color: #4b3f00;
+        font-size: 8px;
+        line-height: 12px;
+        text-align: center;
+      }
+      .voice-chip.more {
+        background: var(--tab-blue);
+        color: white;
+      }
+      .state-note {
+        margin-top: 4px;
+        padding: 6px 8px;
+        border-radius: 10px;
+        background: rgba(255,255,255,0.72);
+        color: #607894;
+        font-size: 9px;
+        line-height: 1.35;
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+        margin-bottom: 6px;
+      }
+      .row.compact {
+        margin-bottom: 4px;
+      }
+      .select {
+        height: 32px;
+        padding: 0 10px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 12px;
+        font-weight: 900;
+      }
+      .range-row {
+        display: grid;
+        grid-template-columns: 1fr 54px;
+        gap: 8px;
+        align-items: center;
+      }
+      .bar {
+        height: 8px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, var(--yellow) 0 90%, rgba(31,48,68,0.1) 90% 100%);
+      }
+      .bar.mid {
+        background: linear-gradient(90deg, var(--yellow) 0 76%, rgba(31,48,68,0.1) 76% 100%);
+      }
+      .valuebox {
+        height: 30px;
+        border-radius: 10px;
+        display: grid;
+        place-items: center;
+        font-size: 12px;
+        font-weight: 900;
+      }
+      .mic-box {
+        padding: 6px;
+        border-radius: 12px;
+        background: rgba(255,255,255,0.6);
+      }
+      .mic-cta {
+        height: 66px;
+        border-radius: 14px;
+        background: linear-gradient(180deg, #fff7dd, #f3e2a0);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        font-size: 10px;
+        font-weight: 900;
+      }
+      .mic {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: #ffd71f;
+        display: grid;
+        place-items: center;
+        font-size: 15px;
+      }
+      .flow {
+        margin-top: 6px;
+        border-radius: 10px;
+        background: white;
+        padding: 6px 8px;
+        color: #647b96;
+        font-size: 8px;
+        line-height: 1.35;
+      }
+      .preview {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+      }
+      .preview-card {
+        padding: 6px;
+        border-radius: 10px;
+      }
+      .preview-card strong {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 11px;
+      }
+      .time {
+        font-size: 9px;
+        color: var(--muted);
+        font-weight: 700;
+      }
+      .wave {
+        margin-top: 6px;
+        height: 7px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, var(--yellow) 0 72%, rgba(31,48,68,0.1) 72% 100%);
+      }
+      .btn-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: auto;
+        padding-top: 8px;
+      }
+      .btn {
+        height: 36px;
+        border-radius: 16px;
+        display: grid;
+        place-items: center;
+        font-size: 11px;
+        font-weight: 900;
+      }
+      .btn.white { background: white; color: #2d3a49; }
+      .btn.yellow { background: linear-gradient(180deg, #ffec76, var(--yellow)); color: #342a00; }
+    </style>
+  </head>
+  <body>
+    <main class="canvas">
+      <section class="frame">
+        <div class="screen">
+          <aside class="sidebar">
+            <div class="arrow">←</div>
+            <div class="title">音频生成</div>
+            <div class="nav-tab active">文本生成</div>
+            <div class="nav-subtab">语音转音色</div>
+          </aside>
+
+          <section class="saved-col">
+            <div class="saved-box">
+              <div class="saved-head">
+                <span>已保存音频</span>
+                <span>如何使用</span>
+              </div>
+              <div class="audio-item">
+                <div class="play">▶</div>
+                <div>
+                  <strong>可爱少女_音频_10</strong>
+                  <span>i love you</span>
+                </div>
+                <div class="dots">···</div>
+              </div>
+              <div class="audio-item">
+                <div class="play">▶</div>
+                <div>
+                  <strong>萌宠声线_音频_8</strong>
+                  <span>i love you</span>
+                </div>
+                <div class="dots">···</div>
+              </div>
+              <div class="audio-item">
+                <div class="play">▶</div>
+                <div>
+                  <strong>蛋小黄_音频_6</strong>
+                  <span>咔咔，我的小啾啾！</span>
+                </div>
+                <div class="dots">···</div>
+              </div>
+            </div>
+          </section>
+
+          <section class="param-col">
+            <div class="param-title">生成参数</div>
+            <div class="section">
+              <div class="label">配音内容</div>
+              <div class="textbox">鸡蛋鸭蛋荷包蛋！<span class="counter">8/50</span></div>
+            </div>
+            <div class="section">
+              <div class="label">音色</div>
+              <div class="voice-grid">
+                <div class="voice-chip active">凶狠坏蛋</div>
+                <div class="voice-chip">蛋小黄</div>
+                <div class="voice-chip">青年女性</div>
+                <div class="voice-chip">青年男性</div>
+                <div class="voice-chip">可爱少女</div>
+                <div class="voice-chip">单纯少年</div>
+                <div class="voice-chip">粗犷男声</div>
+                <div class="voice-chip more">更多</div>
+              </div>
+            </div>
+            <div class="section">
+              <div class="row">
+                <div class="select"><span>情绪</span><span>高兴 ▾</span></div>
+                <div class="select"><span>语速</span><span>正常 ▾</span></div>
+              </div>
+              <div class="range-row">
+                <div class="bar"></div>
+                <div class="valuebox">100</div>
+              </div>
+            </div>
+            <div class="btn-row">
+              <div class="btn white">AI朗读</div>
+              <div class="btn yellow">保存</div>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="frame">
+        <div class="screen">
+          <aside class="sidebar">
+            <div class="arrow">←</div>
+            <div class="title">音频生成</div>
+            <div class="nav-tab">文本生成</div>
+            <div class="nav-subtab active">语音转音色</div>
+          </aside>
+
+          <section class="saved-col">
+            <div class="saved-box">
+              <div class="saved-head">
+                <span>已保存音频</span>
+                <span>如何使用</span>
+              </div>
+              <div class="audio-item">
+                <div class="play">▶</div>
+                <div>
+                  <strong>可爱少女_音频_10</strong>
+                  <span>i love you</span>
+                </div>
+                <div class="dots">···</div>
+              </div>
+              <div class="audio-item">
+                <div class="play">▶</div>
+                <div>
+                  <strong>萌宠声线_音频_8</strong>
+                  <span>i love you</span>
+                </div>
+                <div class="dots">···</div>
+              </div>
+              <div class="audio-item">
+                <div class="play">▶</div>
+                <div>
+                  <strong>用户语音_转青年女性_03</strong>
+                  <span>试听满意，已保存</span>
+                </div>
+                <div class="dots">···</div>
+              </div>
+            </div>
+          </section>
+
+          <section class="param-col">
+            <div class="param-title">语音转音色</div>
+            <div class="section">
+              <div class="label">选择音色</div>
+              <div class="voice-grid">
+                <div class="voice-chip">蛋小黄</div>
+                <div class="voice-chip active">青年女性</div>
+                <div class="voice-chip">青年男性</div>
+                <div class="voice-chip">可爱少女</div>
+                <div class="voice-chip">单纯少年</div>
+                <div class="voice-chip">粗犷男声</div>
+                <div class="voice-chip">可爱萝莉</div>
+                <div class="voice-chip more">更多</div>
+              </div>
+            </div>
+            <div class="section">
+              <div class="label">输入语音</div>
+              <div class="mic-box">
+                <div class="mic-cta">
+                  <div class="mic">🎤</div>
+                  <div>按住说话 / 点击录音</div>
+                </div>
+                <div class="flow">录入语音后，系统自动根据所选音色生成目标音频。先试听结果，满意后再保存到“已保存音频”。</div>
+              </div>
+            </div>
+            <div class="section">
+              <div class="label">生成参数</div>
+              <div class="row compact">
+                <div class="select"><span>情绪</span><span>高兴 ▾</span></div>
+                <div class="select"><span>语速</span><span>正常 ▾</span></div>
+              </div>
+              <div class="range-row">
+                <div class="bar mid"></div>
+                <div class="valuebox">100</div>
+              </div>
+            </div>
+            <div class="section">
+              <div class="label">试听结果</div>
+              <div class="preview">
+                <div class="preview-card">
+                  <strong>原始语音</strong>
+                  <div class="time">00:12</div>
+                  <div class="wave"></div>
+                </div>
+                <div class="preview-card">
+                  <strong>转换音频</strong>
+                  <div class="time">00:12</div>
+                  <div class="wave"></div>
+                </div>
+              </div>
+            </div>
+            <div class="btn-row">
+              <div class="btn white">试听</div>
+              <div class="btn yellow">满意并保存</div>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="frame">
+        <div class="screen">
+          <aside class="sidebar">
+            <div class="arrow">←</div>
+            <div class="title">音频生成</div>
+            <div class="nav-tab">文本生成</div>
+            <div class="nav-subtab active">语音转音色</div>
+          </aside>
+
+          <section class="saved-col">
+            <div class="saved-box">
+              <div class="saved-head">
+                <span>已保存音频</span>
+                <span>如何使用</span>
+              </div>
+              <div class="audio-item">
+                <div class="play">▶</div>
+                <div>
+                  <strong>可爱少女_音频_10</strong>
+                  <span>i love you</span>
+                </div>
+                <div class="dots">···</div>
+              </div>
+              <div class="audio-item">
+                <div class="play">▶</div>
+                <div>
+                  <strong>萌宠声线_音频_8</strong>
+                  <span>i love you</span>
+                </div>
+                <div class="dots">···</div>
+              </div>
+              <div class="audio-item">
+                <div class="play">▶</div>
+                <div>
+                  <strong>用户语音_转青年女性_待确认</strong>
+                  <span>已生成结果，等待确认保存</span>
+                </div>
+                <div class="dots">···</div>
+              </div>
+            </div>
+          </section>
+
+          <section class="param-col">
+            <div class="param-title">语音转音色</div>
+            <div class="section">
+              <div class="label">选择音色</div>
+              <div class="voice-grid">
+                <div class="voice-chip">蛋小黄</div>
+                <div class="voice-chip current">青年女性</div>
+                <div class="voice-chip">青年男性</div>
+                <div class="voice-chip">可爱少女</div>
+                <div class="voice-chip">单纯少年</div>
+                <div class="voice-chip">粗犷男声</div>
+                <div class="voice-chip">可爱萝莉</div>
+                <div class="voice-chip more">更多</div>
+              </div>
+              <div class="state-note">当前音色：青年女性。结果待确认期间，当前音色不可再次切换。</div>
+            </div>
+            <div class="section">
+              <div class="label">输入语音</div>
+              <div class="mic-box">
+                <div class="mic-cta">
+                  <div class="mic">🎤</div>
+                  <div>录音已完成，等待确认</div>
+                </div>
+                <div class="flow">已根据当前音色生成试听结果。确认保存前，可试听对比，但不可再次选中当前音色。</div>
+              </div>
+            </div>
+            <div class="section">
+              <div class="label">生成参数</div>
+              <div class="row compact">
+                <div class="select"><span>情绪</span><span>高兴 ▾</span></div>
+                <div class="select"><span>语速</span><span>正常 ▾</span></div>
+              </div>
+              <div class="range-row">
+                <div class="bar mid"></div>
+                <div class="valuebox">100</div>
+              </div>
+            </div>
+            <div class="section">
+              <div class="label">试听结果</div>
+              <div class="preview">
+                <div class="preview-card">
+                  <strong>原始语音</strong>
+                  <div class="time">00:12</div>
+                  <div class="wave"></div>
+                </div>
+                <div class="preview-card">
+                  <strong>转换音频</strong>
+                  <div class="time">00:12</div>
+                  <div class="wave"></div>
+                </div>
+              </div>
+            </div>
+            <div class="btn-row">
+              <div class="btn white">重新录入</div>
+              <div class="btn yellow">确认保存</div>
+            </div>
+          </section>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
+
