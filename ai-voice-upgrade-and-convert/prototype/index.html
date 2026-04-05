@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>音频生成原型</title>
+    <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="viewport">
+  <div class="canvas" id="canvasRoot">
+    <div class="shell">
+      <aside class="rail">
+        <div class="rail-header">
+          <button class="back" aria-label="返回">←</button>
+          <div class="rail-title">音频生成</div>
+        </div>
+        <div class="rail-tabs">
+          <button class="rail-tab active" data-tab="tts">AI朗读</button>
+          <button class="rail-tab" data-tab="vc">语音转换</button>
+        </div>
+      </aside>
+
+      <main class="main">
+        <section class="main-panel">
+          <div class="saved-list">
+            <div class="saved-head">
+              <span>已保存音频</span>
+              <span class="saved-help">如何使用？</span>
+            </div>
+            <div class="saved-body" id="audioListView"></div>
+          </div>
+        </section>
+      </main>
+
+      <aside class="side">
+        <h2 class="side-title" id="sideTitle">生成参数</h2>
+        <div class="side-listview" id="sideListView">
+          <div class="field" id="ttsTextField">
+            <div class="label">配音内容</div>
+            <textarea class="textarea">制作出满意的声音后，我们可以点击保存</textarea>
+            <div class="counter">18/50</div>
+          </div>
+
+          <div class="field" id="voiceField">
+            <div class="label">
+              音色
+              <span class="badge-upgrade" id="upgradeBadge">服务升级</span>
+            </div>
+            <div class="voice-grid">
+              <button class="chip active" data-voice="蛋小黄">蛋小黄</button>
+              <button class="chip" data-voice="青年女性">青年女性</button>
+              <button class="chip" data-voice="青年男性">青年男性</button>
+              <button class="chip" data-voice="可爱少女">可爱少女</button>
+              <button class="chip" data-voice="单纯少年">单纯少年</button>
+              <button class="chip" data-voice="粗旷男声">粗旷男声</button>
+              <button class="chip" data-voice="老奶奶">老奶奶</button>
+              <button class="chip">更多 ＞</button>
+            </div>
+          </div>
+
+          <div class="field" id="ttsEmotionField">
+            <div class="label">情绪</div>
+            <select class="select">
+              <option>中性</option>
+              <option>开心</option>
+              <option>严肃</option>
+            </select>
+          </div>
+
+          <div class="field" id="ttsSpeedField">
+            <div class="label">语速</div>
+            <select class="select">
+              <option>正常</option>
+              <option>较慢</option>
+              <option>较快</option>
+            </select>
+          </div>
+
+          <div class="field" id="volumeField">
+            <div class="label">音量</div>
+            <div class="slider-row">
+              <span>0</span>
+              <input type="range" min="0" max="100" value="100" id="volumeSlider">
+              <span id="volumeValue">100</span>
+            </div>
+          </div>
+          <div class="vc-result-strip" id="vcResultStrip" hidden>
+            <div class="vc-result-head">
+              <div class="result-title">语音转换</div>
+              <div class="result-subtitle">试听结果</div>
+            </div>
+            <div class="preview-grid">
+              <div class="preview-card">
+                <div class="preview-head">
+                  <div class="preview-name">原始语音</div>
+                  <button class="preview-play" id="previewOriginalBtn">▶</button>
+                </div>
+                <div class="preview-time">00:12</div>
+                <div class="preview-bar"><div class="preview-fill" style="width:72%;"></div></div>
+              </div>
+              <div class="preview-card">
+                <div class="preview-head">
+                  <div class="preview-name">转换音频</div>
+                  <button class="preview-play" id="previewConvertedBtn">▶</button>
+                </div>
+                <div class="preview-time">00:12</div>
+                <div class="preview-bar"><div class="preview-fill" style="width:74%;"></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="vc-result-actions" id="vcResultActions" hidden>
+            <button class="regenerate-btn" id="regenTopBtn">修改音色并重新生成</button>
+            <div class="result-bottom-actions">
+              <button class="strip-action-btn warn" id="discardBtn">重新录入</button>
+              <button class="strip-action-btn primary" id="saveReviewBtn">满意并保存</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="action-helper" id="actionHelper" hidden>
+          <span class="helper-icon helper-recording" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </span>
+          <span class="helper-icon helper-cancel" aria-hidden="true">
+            <span class="helper-arrow">↑</span>
+            <span class="helper-close">×</span>
+          </span>
+          <span class="helper-text" id="actionHelperText">上滑可取消</span>
+        </div>
+        <div class="actions">
+          <button class="action primary" id="primaryAction">
+            <span class="button-icon button-icon-recording" aria-hidden="true">
+              <span></span><span></span><span></span>
+            </span>
+            <span class="button-icon button-icon-cancel" aria-hidden="true">
+              <span class="button-arrow">↑</span>
+              <span class="button-close">×</span>
+            </span>
+            <span class="button-label" id="primaryActionLabel">AI朗读</span>
+          </button>
+          <button class="action secondary" id="secondaryAction">保存</button>
+          <div class="more-menu" id="moreMenu" hidden>
+            <button class="menu-item" id="uploadAudioAction">上传音频</button>
+          </div>
+        </div>
+        <div class="vc-recording-strip" id="vcRecordingStrip" hidden></div>
+        <input type="file" id="audioFileInput" accept="audio/*" hidden>
+      </aside>
+    </div>
+    <div class="processing-overlay" id="processingOverlay" hidden>
+      <div class="processing-card">
+        <div class="spinner"></div>
+        <div class="processing-title">正在生成语音</div>
+        <div class="processing-desc" id="processingDesc">请稍候，处理中暂不可操作</div>
+      </div>
+    </div>
+  </div>
+  </div>
+
+    <script src="./app.js"></script>
+</body>
+</html>
