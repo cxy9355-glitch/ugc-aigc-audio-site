@@ -1,6 +1,7 @@
 # AI配音升级与语音转换
 
 - 文档：`U5_UGC研发组_《AI配音升级与语音转换》_初小宇.md`
+- 文档框架：`docs/AI配音升级与语音转换_PRD框架.md`
 - OpenSpec：`openspec/proposal.md`
 - 原型：`prototype/index.html`
 - 流程图资源：`ai-voice-upgrade-assets/voice-convert-flow.svg`
